@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Auto Gladiators — Hero Picker</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    min-height: 100vh;
+    background: linear-gradient(170deg, #0a0c14 0%, #121829 40%, #0d1520 100%);
+    color: #e0e4ec;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    padding: 24px 16px;
+  }
+  .header { text-align: center; margin-bottom: 32px; }
+  .header h1 {
+    font-size: 32px; font-weight: 800;
+    background: linear-gradient(135deg, #f0c040, #e07020, #d04040);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    letter-spacing: 2px; text-transform: uppercase;
+  }
+  .header p { font-size: 14px; color: #8090a8; margin-top: 4px; letter-spacing: 3px; text-transform: uppercase; }
+  .container { max-width: 700px; margin: 0 auto; }
+  .sect-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+  .sect-label { font-size: 13px; color: #8090a8; text-transform: uppercase; letter-spacing: 1px; }
+  .sect-counter { font-size: 24px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .sect-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(88px, 1fr)); gap: 8px; margin-bottom: 16px; }
+  .sect-btn {
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+    padding: 10px 4px; border-radius: 10px; border: 2px solid rgba(255,255,255,0.08);
+    background: rgba(255,255,255,0.03); color: #8090a8; cursor: pointer;
+    transition: all 0.2s ease; font-size: 12px; font-weight: 500; outline: none;
+  }
+  .sect-btn:hover:not(.disabled) { background: rgba(255,255,255,0.06); }
+  .sect-btn .emoji { font-size: 22px; }
+  .sect-btn.disabled { opacity: 0.35; cursor: not-allowed; color: #444; }
+  .clear-btn {
+    background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
+    color: #8090a8; padding: 4px 10px; border-radius: 6px; cursor: pointer; font-size: 12px;
+  }
+  .clear-btn:hover { background: rgba(255,255,255,0.1); }
+  .missing-bar { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; justify-content: center; margin-bottom: 8px; }
+  .missing-label { font-size: 11px; color: #556; text-transform: uppercase; letter-spacing: 1px; }
+  .missing-pill {
+    font-size: 11px; color: #665544; background: rgba(255,255,255,0.04);
+    padding: 2px 8px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.06);
+  }
+  .notes { display: flex; flex-direction: column; gap: 4px; margin: 12px 0 24px; }
+  .note {
+    font-size: 12px; padding: 6px 12px; border-radius: 6px;
+  }
+  .note.good { background: rgba(68,220,100,0.08); border: 1px solid rgba(68,220,100,0.15); color: #66dd88; }
+  .note.warn { background: rgba(255,180,60,0.08); border: 1px solid rgba(255,180,60,0.12); color: #ddaa44; }
+  .results-title {
+    font-size: 16px; font-weight: 700; text-transform: uppercase; letter-spacing: 2px;
+    color: #f0c040; margin-bottom: 16px; text-align: center;
+  }
+  .hero-card {
+    background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 12px; padding: 16px; position: relative; margin-bottom: 12px;
+  }
+  .hero-card.top {
+    background: linear-gradient(135deg, rgba(240,192,64,0.08), rgba(208,64,64,0.06));
+    border: 1px solid rgba(240,192,64,0.25);
+  }
+  .rank-badge {
+    position: absolute; top: -1px; left: -1px; width: 28px; height: 28px;
+    border-radius: 12px 0 8px 0; display: flex; align-items: center; justify-content: center;
+    font-weight: 800; font-size: 14px;
+  }
+  .hero-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; padding-left: 32px; }
+  .hero-name { font-size: 18px; font-weight: 700; }
+  .hero-alias { font-size: 12px; color: #556; margin-left: 8px; }
+  .power-badge { font-size: 16px; font-weight: 800; padding: 2px 10px; border-radius: 6px; }
+  .build-info { display: flex; flex-direction: column; gap: 6px; padding-left: 32px; }
+  .build-label { font-size: 14px; font-weight: 600; color: #aabbcc; }
+  .sect-pills { display: flex; flex-wrap: wrap; gap: 4px; }
+  .sect-pill { font-size: 11px; padding: 2px 8px; border-radius: 4px; font-weight: 600; }
+  .meta-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 2px; }
+  .meta-pill { font-size: 11px; padding: 2px 8px; border-radius: 4px; }
+  .icon-info { font-size: 11px; color: #556; }
+  .poison-warn {
+    font-size: 11px; color: #cc6644; background: rgba(204,102,68,0.08);
+    padding: 3px 8px; border-radius: 4px; border: 1px solid rgba(204,102,68,0.15); margin-top: 2px;
+  }
+  .footer { text-align: center; margin-top: 40px; font-size: 11px; color: #334; letter-spacing: 1px; }
+  .empty { text-align: center; color: #556; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>Auto Gladiators</h1>
+  <p>Hero Picker</p>
+</div>
+
+<div class="container" id="app"></div>
+
+<script>
+// ============================================================
+// DATA
+// ============================================================
+const SECTS = [
+  { id: "attack", name: "Attack", color: "#e74c3c", emoji: "⚔️" },
+  { id: "evasion", name: "Evasion", color: "#9b59b6", emoji: "💨" },
+  { id: "crit", name: "Crit", color: "#e67e22", emoji: "💥" },
+  { id: "health", name: "Health", color: "#2ecc71", emoji: "❤️" },
+  { id: "regen", name: "Regen", color: "#27ae60", emoji: "🩹" },
+  { id: "ult", name: "Ult", color: "#3498db", emoji: "🔮" },
+  { id: "poison", name: "Poison", color: "#8e44ad", emoji: "☠️" },
+  { id: "frost", name: "Frost", color: "#00bcd4", emoji: "❄️" },
+  { id: "shield", name: "Shield", color: "#f39c12", emoji: "🛡️" },
+  { id: "injury", name: "Injury", color: "#c0392b", emoji: "🩸" },
+  { id: "spirits", name: "Spirits", color: "#1abc9c", emoji: "👻" },
+  { id: "fury", name: "Fury", color: "#d35400", emoji: "🔥" },
+  { id: "chaos", name: "Chaos", color: "#7f8c8d", emoji: "🌀" },
+];
+
+const HEROES = [
+  { name:"Treant Protector", alias:"Furion", icons:["spirits"], poisonWeak:false, builds:[
+    { main1:"spirits", main2:null, additional:["chaos","injury","poison"], critImportance:5, power:[5,5], shard:"good", label:"Spirits + Chaos/Injure/Poison" },
+    { main1:"attack", main2:null, additional:["health"], critImportance:5, power:[5,5], shard:"good", label:"Attack + Health/Dice" },
+  ]},
+  { name:"Ursa", icons:["injury"], poisonWeak:false, builds:[
+    { main1:"attack", main2:null, additional:["health"], critImportance:5, power:[5,5], shard:"no need", label:"Attack + Health/Dice" },
+    { main1:"health", main2:null, additional:[], critImportance:5, power:[5,5], shard:"no need", label:"Health + Dice" },
+    { main1:"ult", main2:"attack", additional:[], critImportance:5, power:[3,4], shard:"no need", label:"Ult + Attack" },
+  ]},
+  { name:"Sniper", icons:["crit"], poisonWeak:false, builds:[
+    { main1:"attack", main2:"crit", additional:["evasion"], critImportance:2, power:[3,4], shard:"no need", label:"Attack + Crit" },
+    { main1:"health", main2:"crit", additional:["regen"], critImportance:1, power:[3,4], shard:"no need", label:"Health/Regen + Crit/Procs" },
+    { main1:"attack", main2:"evasion", additional:["crit"], critImportance:2, power:[5,5], shard:"no need", label:"Attack + Crit + Evasion ★" },
+  ]},
+  { name:"Earthshaker", icons:["crit"], poisonWeak:false, builds:[
+    { main1:"attack", main2:"crit", additional:[], critImportance:2, power:[5,5], shard:"buy late", label:"Attack + Crit" },
+    { main1:"crit", main2:null, additional:[], critImportance:1, power:[5,5], shard:"buy late", label:"Crit + Procs" },
+  ]},
+  { name:"Alchemist", icons:[], poisonWeak:false, builds:[
+    { main1:"health", main2:null, additional:[], critImportance:4, power:[4,5], shard:"no need", label:"Health + Dice" },
+    { main1:"spirits", main2:null, additional:[], critImportance:4, power:[4,5], shard:"no need", label:"Spirits + Dice" },
+    { main1:"evasion", main2:"regen", additional:[], critImportance:3, power:[4,5], shard:"no need", label:"Evade + Regen/Dice" },
+    { main1:"ult", main2:null, additional:[], critImportance:2, power:[2,2], shard:"no need", label:"Ult + Dice" },
+  ]},
+  { name:"Bristleback", icons:[], poisonWeak:false, builds:[
+    { main1:"attack", main2:"ult", additional:[], critImportance:2, power:[3,3], shard:"buy late", label:"Attack + Ult" },
+    { main1:"regen", main2:null, additional:["crit","health"], critImportance:2, power:[4,5], shard:"buy late", label:"Regen + Dice/Crit" },
+    { main1:"ult", main2:null, additional:["regen","crit"], critImportance:2, power:[3,3], shard:"buy late", label:"Ult + Regen/Crit" },
+  ]},
+  { name:"Monkey King", alias:"Destined One", icons:[], poisonWeak:false, builds:[
+    { main1:"spirits", main2:null, additional:["attack","poison"], critImportance:2, power:[4,4], shard:"situational", label:"Spirits + Attack/Poison" },
+    { main1:"health", main2:null, additional:[], critImportance:2, power:[4,5], shard:"situational", label:"Health + Dice" },
+    { main1:null, main2:null, additional:[], critImportance:1, power:[4,4], shard:"situational", label:"Dice/Anything" },
+  ]},
+  { name:"Hoodwink", icons:[], poisonWeak:false, builds:[
+    { main1:"ult", main2:"crit", additional:[], critImportance:1, power:[3,3], shard:"situational", label:"Ult + Crit" },
+    { main1:"health", main2:null, additional:["injury","poison"], critImportance:2, power:[3,4], shard:"situational", label:"Health + Dice/Injure/Poison" },
+  ]},
+  { name:"Tinker", icons:[], poisonWeak:false, builds:[
+    { main1:"attack", main2:null, additional:["health"], critImportance:2, power:[3,4], shard:"situational", label:"Attack + Health" },
+    { main1:"regen", main2:null, additional:["evasion"], critImportance:3, power:[2,3], shard:"situational", label:"Regen + Evade" },
+    { main1:"spirits", main2:null, additional:[], critImportance:3, power:[3,3], shard:"situational", label:"Spirits + Dice" },
+    { main1:"health", main2:null, additional:["evasion"], critImportance:3, power:[3,3], shard:"situational", label:"Health + Evade" },
+  ]},
+  { name:"Zombie Guitarist", icons:[], poisonWeak:false, builds:[
+    { main1:"health", main2:null, additional:["poison"], critImportance:4, power:[4,4], shard:"good", label:"Health + Dice/Poison" },
+    { main1:"ult", main2:null, additional:[], critImportance:4, power:[4,4], shard:"good", label:"Ult + Survival" },
+  ]},
+  { name:"Phantom Assassin", alias:"PA", icons:["crit","attack"], poisonWeak:false, builds:[
+    { main1:"attack", main2:"crit", additional:[], critImportance:2, power:[4,5], shard:"situational", label:"Attack + Crit" },
+    { main1:"attack", main2:null, additional:["crit"], critImportance:1, power:[4,6], shard:"situational", label:"Attack + Crit/Procs" },
+  ]},
+  { name:"Juggernaut", icons:["crit","attack"], poisonWeak:false, builds:[
+    { main1:"attack", main2:"crit", additional:["shield"], critImportance:2, power:[3,3], shard:"good", label:"Attack + Crit + Shield" },
+    { main1:"ult", main2:"crit", additional:[], critImportance:1, power:[4,4], shard:"good", label:"Ult + Crit" },
+  ]},
+  { name:"Chaos Knight", alias:"Lu Bu", icons:["crit","regen"], poisonWeak:false, builds:[
+    { main1:"crit", main2:"regen", additional:[], critImportance:1, power:[4,5], shard:"buy late", label:"Crit + Regen/Procs" },
+    { main1:"attack", main2:"crit", additional:[], critImportance:2, power:[4,5], shard:"buy late", label:"Attack + Crit" },
+  ]},
+  { name:"Ogre Magi", icons:["ult","crit"], poisonWeak:false, builds:[
+    { main1:"ult", main2:"crit", additional:[], critImportance:3, power:[4,6], shard:"no need", label:"Ult + Crit" },
+    { main1:"ult", main2:"crit", additional:[], critImportance:1, power:[4,5], shard:"musthave", label:"Ult + Crit (Shard)" },
+  ]},
+  { name:"Spectre", icons:["evasion"], poisonWeak:true, builds:[
+    { main1:"evasion", main2:null, additional:["regen","health","injury"], critImportance:4, power:[4,5], shard:"good", label:"Evade + Regen/Health/Injure" },
+    { main1:"evasion", main2:null, additional:["crit"], critImportance:4, power:[4,5], shard:"good", label:"Evade + Crit/Dice/Procs" },
+  ]},
+  { name:"Riki", icons:["evasion","injury"], poisonWeak:true, builds:[
+    { main1:"evasion", main2:"health", additional:[], critImportance:4, power:[4,5], shard:"no need", label:"Evade + Health + Dice" },
+    { main1:"evasion", main2:null, additional:["crit"], critImportance:4, power:[4,6], shard:"no need", label:"Evade + Dice + Crit" },
+  ]},
+  { name:"Windrunner", icons:["evasion"], poisonWeak:true, builds:[
+    { main1:"evasion", main2:null, additional:["crit"], critImportance:3, power:[2,3], shard:"no need", label:"Evade + Crit" },
+    { main1:"attack", main2:null, additional:["evasion"], critImportance:2, power:[3,4], shard:"musthave", label:"Attack + Evade" },
+  ]},
+  { name:"Grimstroke", icons:["evasion"], poisonWeak:true, builds:[
+    { main1:"evasion", main2:"injury", additional:[], critImportance:4, power:[3,3], shard:"situational", label:"Evade + Injure" },
+    { main1:"ult", main2:"evasion", additional:[], critImportance:4, power:[3,4], shard:"situational", label:"Ult + Evade" },
+  ]},
+  { name:"Luna", icons:["attack"], poisonWeak:false, builds:[
+    { main1:"attack", main2:null, additional:[], critImportance:1, power:[4,4], shard:"situational", label:"Attack + Anything" },
+    { main1:"attack", main2:"crit", additional:[], critImportance:1, power:[4,5], shard:"good", label:"Attack + Crit" },
+  ]},
+  { name:"Marci", icons:["attack"], poisonWeak:false, builds:[
+    { main1:"attack", main2:null, additional:["crit"], critImportance:2, power:[3,4], shard:"good", label:"Attack + Crit" },
+    { main1:"attack", main2:null, additional:[], critImportance:2, power:[3,3], shard:"good", label:"Attack + Survival" },
+  ]},
+  { name:"Faceless Void", icons:["attack"], poisonWeak:false, builds:[
+    { main1:"attack", main2:null, additional:[], critImportance:1, power:[3,4], shard:"no need", label:"Attack + Dice" },
+    { main1:"ult", main2:"evasion", additional:[], critImportance:3, power:[2,2], shard:"no need", label:"Ult + Evade" },
+  ]},
+  { name:"Kez", icons:["attack"], poisonWeak:false, builds:[
+    { main1:"attack", main2:"crit", additional:[], critImportance:2, power:[3,4], shard:"no need", label:"Attack + Crit" },
+    { main1:"ult", main2:"evasion", additional:[], critImportance:2, power:[2,3], shard:"musthave", label:"Ult + Evade" },
+    { main1:"attack", main2:null, additional:[], critImportance:5, power:[3,3], shard:"situational", label:"Attack + Dice" },
+  ]},
+  { name:"Phantom Lancer", icons:["attack"], poisonWeak:false, builds:[
+    { main1:"attack", main2:null, additional:["poison","chaos"], critImportance:4, power:[3,4], shard:"buy late", label:"Attack + Poison/Chaos" },
+  ]},
+  { name:"Terrorblade", icons:["attack"], poisonWeak:false, builds:[
+    { main1:"attack", main2:"crit", additional:[], critImportance:2, power:[3,3], shard:"no need", label:"Attack + Crit" },
+    { main1:"chaos", main2:"health", additional:["attack"], critImportance:2, power:[2,3], shard:"musthave", label:"Chaos + Health + Attack" },
+  ]},
+  { name:"Awakened", alias:"Zen", icons:["attack"], poisonWeak:false, builds:[
+    { main1:"attack", main2:"crit", additional:[], critImportance:2, power:[3,4], shard:"no need", label:"Attack + Crit" },
+    { main1:"attack", main2:"ult", additional:[], critImportance:2, power:[4,5], shard:"no need", label:"Attack + Ult" },
+  ]},
+  { name:"Crystal Maiden", icons:["frost"], poisonWeak:false, builds:[
+    { main1:"ult", main2:"frost", additional:["crit"], critImportance:3, power:[3,3], shard:"situational", label:"Ult + Frost" },
+    { main1:"regen", main2:null, additional:["crit","frost"], critImportance:1, power:[4,4], shard:"good", label:"Regen + Crit/Frost" },
+    { main1:"attack", main2:null, additional:["frost"], critImportance:1, power:[3,4], shard:"musthave", label:"Attack + Dice/Frost" },
+  ]},
+  { name:"Lich", icons:["frost"], poisonWeak:false, builds:[
+    { main1:"health", main2:"frost", additional:[], critImportance:3, power:[4,4], shard:"buy late", label:"Health + Frost" },
+    { main1:"spirits", main2:"frost", additional:["crit"], critImportance:3, power:[3,4], shard:"buy late", label:"Spirits + Frost" },
+    { main1:"ult", main2:"frost", additional:[], critImportance:3, power:[3,3], shard:"situational", label:"Ult + Frost" },
+  ]},
+  { name:"Drow Ranger", icons:["frost"], poisonWeak:false, builds:[
+    { main1:"attack", main2:"crit", additional:["frost"], critImportance:2, power:[3,4], shard:"situational", label:"Attack + Crit + Frost" },
+    { main1:"ult", main2:null, additional:["crit","frost"], critImportance:2, power:[3,5], shard:"situational", label:"Ult + Dice + Crit" },
+    { main1:"crit", main2:null, additional:["shield","frost"], critImportance:1, power:[3,4], shard:"situational", label:"Crit + Shield/Frost" },
+  ]},
+  { name:"Ancient Apparition", icons:["frost"], poisonWeak:false, builds:[
+    { main1:"health", main2:"frost", additional:[], critImportance:3, power:[3,3], shard:"buy late", label:"Health + Frost" },
+    { main1:"ult", main2:null, additional:["frost"], critImportance:3, power:[3,3], shard:"buy late", label:"Ult + Frost" },
+  ]},
+  { name:"Viper", icons:["poison"], poisonWeak:false, builds:[
+    { main1:"ult", main2:null, additional:["poison"], critImportance:6, power:[2,3], shard:"situational", label:"Ult/All Sects" },
+    { main1:"health", main2:"poison", additional:[], critImportance:6, power:[4,5], shard:"situational", label:"Health + Poison" },
+  ]},
+  { name:"Queen of Pain", icons:["poison"], poisonWeak:false, builds:[
+    { main1:"ult", main2:"health", additional:["poison","regen"], critImportance:6, power:[2,3], shard:"no need", label:"Ult + Health + Poison/Regen" },
+    { main1:"crit", main2:"poison", additional:[], critImportance:6, power:[3,4], shard:"no need", label:"Crit + Poison" },
+    { main1:"spirits", main2:"poison", additional:[], critImportance:6, power:[3,3], shard:"no need", label:"Spirits + Poison" },
+  ]},
+  { name:"Ringmaster", icons:["poison"], poisonWeak:false, builds:[
+    { main1:"poison", main2:null, additional:["health"], critImportance:4, power:[3,3], shard:"good", label:"Poison + Health" },
+    { main1:"ult", main2:null, additional:[], critImportance:4, power:[3,3], shard:"buy late", label:"Ult + Survival" },
+  ]},
+  { name:"Razor", icons:["injury"], poisonWeak:false, builds:[
+    { main1:"crit", main2:null, additional:[], critImportance:1, power:[3,4], shard:"no need", label:"Crit + Procs" },
+    { main1:"health", main2:null, additional:["crit","injury"], critImportance:1, power:[4,4], shard:"no need", label:"Health + Crit/Injure/Dice" },
+  ]},
+  { name:"Nyx Assassin", icons:["injury"], poisonWeak:false, builds:[
+    { main1:"health", main2:null, additional:[], critImportance:3, power:[3,4], shard:"buy late", label:"Health + Survival" },
+    { main1:"ult", main2:null, additional:[], critImportance:4, power:[3,3], shard:"buy late", label:"Ult + Survival" },
+  ]},
+  { name:"Zeus", icons:["ult"], poisonWeak:false, builds:[
+    { main1:"attack", main2:null, additional:[], critImportance:1, power:[3,4], shard:"buy late", label:"Attack + Survival" },
+    { main1:"ult", main2:null, additional:[], critImportance:1, power:[3,4], shard:"buy late", label:"Ult + Survival" },
+  ]},
+  { name:"Silencer", icons:["ult"], poisonWeak:false, builds:[
+    { main1:"attack", main2:null, additional:[], critImportance:4, power:[3,3], shard:"buy late", label:"Attack + Survival" },
+    { main1:"ult", main2:null, additional:[], critImportance:4, power:[3,3], shard:"buy late", label:"Ult + Dice/Survival" },
+  ]},
+  { name:"Life Stealer", icons:["regen"], poisonWeak:false, builds:[
+    { main1:"attack", main2:"regen", additional:[], critImportance:2, power:[3,4], shard:"situational", label:"Attack + Regen" },
+    { main1:"ult", main2:null, additional:["regen","evasion"], critImportance:3, power:[3,3], shard:"situational", label:"Ult + Regen/Evade" },
+  ]},
+  { name:"Omniknight", icons:["regen"], poisonWeak:false, builds:[
+    { main1:"ult", main2:null, additional:["regen"], critImportance:5, power:[3,3], shard:"buy late", label:"Ult + Regen" },
+    { main1:"regen", main2:null, additional:["crit"], critImportance:1, power:[3,4], shard:"buy late", label:"Regen + Crit" },
+  ]},
+  { name:"Skywrath Mage", icons:["regen"], poisonWeak:false, builds:[
+    { main1:"regen", main2:null, additional:["crit","evasion"], critImportance:3, power:[3,3], shard:"good", label:"Regen + Crit/Procs" },
+    { main1:"ult", main2:null, additional:["regen"], critImportance:3, power:[3,3], shard:"good", label:"Ult + Regen/Evade" },
+  ]},
+  { name:"Necrophos", icons:["regen"], poisonWeak:false, builds:[
+    { main1:"health", main2:null, additional:["evasion"], critImportance:4, power:[3,3], shard:"situational", label:"Health + Evade/Health" },
+    { main1:"health", main2:"regen", additional:[], critImportance:4, power:[2,3], shard:"situational", label:"Health/Regen + Poison" },
+    { main1:"ult", main2:null, additional:[], critImportance:4, power:[4,4], shard:"good", label:"Ult" },
+  ]},
+  { name:"Largo", icons:["regen"], poisonWeak:true, builds:[
+    { main1:"regen", main2:"evasion", additional:[], critImportance:4, power:[4,4], shard:"musthave", label:"Regen + Evade" },
+    { main1:"regen", main2:"crit", additional:[], critImportance:1, power:[4,4], shard:"musthave", label:"Regen + Crit" },
+    { main1:"regen", main2:null, additional:[], critImportance:4, power:[3,4], shard:"musthave", label:"Regen + Dice" },
+  ]},
+  { name:"Legion Commander", icons:["shield"], poisonWeak:false, builds:[
+    { main1:"crit", main2:"shield", additional:[], critImportance:1, power:[4,4], shard:"situational", label:"Crit + Shield/Procs" },
+    { main1:"ult", main2:"shield", additional:["crit"], critImportance:2, power:[4,4], shard:"situational", label:"Ult + Shield + Crit" },
+  ]},
+  { name:"Axe", icons:["shield"], poisonWeak:false, builds:[
+    { main1:"attack", main2:null, additional:["crit","shield"], critImportance:2, power:[3,4], shard:"no need", label:"Attack + Crit/Shield" },
+    { main1:"health", main2:null, additional:[], critImportance:2, power:[4,4], shard:"situational", label:"Health + Dice" },
+    { main1:"ult", main2:"shield", additional:[], critImportance:3, power:[2,2], shard:"situational", label:"Ult + Shield" },
+  ]},
+  { name:"Mars", alias:"God of War", icons:["shield"], poisonWeak:false, builds:[
+    { main1:"shield", main2:null, additional:["attack"], critImportance:2, power:[3,4], shard:"buy late", label:"Shield + Attack" },
+    { main1:"ult", main2:"shield", additional:[], critImportance:3, power:[3,3], shard:"buy late", label:"Ult + Shield" },
+  ]},
+  { name:"Wasteland Guardian", icons:["shield"], poisonWeak:false, builds:[
+    { main1:"shield", main2:null, additional:["crit","evasion"], critImportance:2, power:[4,4], shard:"good", label:"Shield + Crit/Evade" },
+    { main1:"ult", main2:"shield", additional:[], critImportance:3, power:[3,3], shard:"good", label:"Ult + Shield" },
+  ]},
+  { name:"Ember Spirit", icons:["fury"], poisonWeak:false, builds:[
+    { main1:"crit", main2:null, additional:["fury"], critImportance:1, power:[3,4], shard:"situational", label:"Crit + Procs + Fury" },
+    { main1:"ult", main2:"fury", additional:["crit"], critImportance:1, power:[3,3], shard:"good", label:"Ult + Fury" },
+    { main1:"attack", main2:"crit", additional:[], critImportance:2, power:[3,4], shard:"situational", label:"Attack + Crit" },
+  ]},
+  { name:"Ash Swordmaiden", alias:"Blademaiden", icons:["fury"], poisonWeak:false, builds:[
+    { main1:"ult", main2:null, additional:["fury"], critImportance:3, power:[3,4], shard:"no need", label:"Ult + Dice/Fury" },
+    { main1:"attack", main2:"fury", additional:[], critImportance:3, power:[3,3], shard:"situational", label:"Attack + Fury" },
+  ]},
+  { name:"Lina", icons:["fury"], poisonWeak:true, builds:[
+    { main1:"health", main2:"fury", additional:["crit"], critImportance:3, power:[3,4], shard:"no need", label:"Health + Fury" },
+    { main1:"ult", main2:null, additional:["fury"], critImportance:3, power:[4,4], shard:"no need", label:"Ult + Fury" },
+    { main1:"evasion", main2:"fury", additional:[], critImportance:3, power:[3,4], shard:"no need", label:"Evade + Fury" },
+  ]},
+  { name:"Huskar", icons:["fury"], poisonWeak:false, builds:[
+    { main1:"health", main2:"fury", additional:["evasion"], critImportance:3, power:[4,4], shard:"no need", label:"Health/Evade + Fury" },
+    { main1:"fury", main2:null, additional:["attack"], critImportance:3, power:[3,3], shard:"buy late", label:"Fury + Attack" },
+  ]},
+  { name:"Yamashita", alias:"sxy", icons:["fury"], poisonWeak:false, builds:[
+    { main1:"health", main2:"fury", additional:[], critImportance:2, power:[3,4], shard:"situational", label:"Health + Fury" },
+    { main1:"ult", main2:"fury", additional:[], critImportance:2, power:[3,3], shard:"situational", label:"Ult + Fury" },
+  ]},
+  { name:"Enigma", icons:["chaos"], poisonWeak:false, builds:[
+    { main1:"ult", main2:null, additional:["evasion","chaos"], critImportance:6, power:[3,4], shard:"situational", label:"Ult + Evade/Chaos" },
+    { main1:"chaos", main2:"health", additional:[], critImportance:6, power:[3,4], shard:"situational", label:"Chaos/Dice + Health" },
+  ]},
+  { name:"Lion", icons:["chaos"], poisonWeak:false, builds:[
+    { main1:"ult", main2:null, additional:[], critImportance:6, power:[3,4], shard:"no need", label:"Ult + Dice" },
+    { main1:"chaos", main2:"health", additional:[], critImportance:6, power:[4,4], shard:"no need", label:"Chaos + Health" },
+    { main1:"attack", main2:null, additional:[], critImportance:6, power:[3,3], shard:"musthave", label:"Attack + Dice" },
+  ]},
+  { name:"Doom", icons:["chaos"], poisonWeak:false, builds:[
+    { main1:"health", main2:"chaos", additional:[], critImportance:6, power:[4,4], shard:"buy late", label:"Health + Chaos" },
+    { main1:"ult", main2:null, additional:["health","regen","evasion","chaos"], critImportance:6, power:[2,2], shard:"buy late", label:"Ult + Health/Regen/Evade" },
+  ]},
+  { name:"Demon Master", alias:"Flameborn", icons:["chaos"], poisonWeak:false, builds:[
+    { main1:"chaos", main2:"health", additional:[], critImportance:6, power:[3,4], shard:"good", label:"Chaos + Health" },
+    { main1:"chaos", main2:"attack", additional:[], critImportance:6, power:[4,4], shard:"good", label:"Chaos + Attack" },
+  ]},
+  { name:"Mirana", icons:["spirits"], poisonWeak:false, builds:[
+    { main1:"spirits", main2:null, additional:["chaos","injury","poison"], critImportance:2, power:[3,3], shard:"situational", label:"Spirits + Chaos/Injure/Poison" },
+    { main1:"spirits", main2:"crit", additional:[], critImportance:1, power:[3,4], shard:"situational", label:"Spirits + Crit" },
+  ]},
+  { name:"Dark Willow", icons:["spirits"], poisonWeak:false, builds:[
+    { main1:"spirits", main2:null, additional:[], critImportance:3, power:[3,3], shard:"situational", label:"Spirits + Dice" },
+    { main1:"spirits", main2:"ult", additional:[], critImportance:3, power:[3,3], shard:"situational", label:"Spirits + Ult" },
+  ]},
+  { name:"Lycan", icons:["spirits"], poisonWeak:false, builds:[
+    { main1:"spirits", main2:"attack", additional:[], critImportance:1, power:[4,4], shard:"good", label:"Spirits + Attack" },
+    { main1:"spirits", main2:"ult", additional:[], critImportance:1, power:[3,4], shard:"situational", label:"Spirits + Ult" },
+    { main1:"attack", main2:"ult", additional:[], critImportance:1, power:[3,3], shard:"situational", label:"Attack + Ult" },
+  ]},
+  { name:"Lone Druid", alias:"Druid", icons:["spirits"], poisonWeak:false, builds:[
+    { main1:"spirits", main2:null, additional:["health"], critImportance:5, power:[4,4], shard:"no need", label:"Spirits + Health/Dice" },
+    { main1:"spirits", main2:"ult", additional:[], critImportance:5, power:[2,3], shard:"no need", label:"Spirits + Ult" },
+  ]},
+  { name:"Pudge", icons:["poison","health"], poisonWeak:false, builds:[
+    { main1:"health", main2:"poison", additional:[], critImportance:6, power:[3,4], shard:"situational", label:"Health + Poison/Dice" },
+    { main1:"ult", main2:"health", additional:[], critImportance:6, power:[3,4], shard:"situational", label:"Ult + Health" },
+  ], specialPower:{ sects:["ult","health","poison","fury","shield"], power:[5,5] }},
+  { name:"Shadow Fiend", alias:"Nevermore", icons:["attack","ult"], poisonWeak:false, builds:[
+    { main1:"ult", main2:null, additional:[], critImportance:1, power:[3,4], shard:"situational", label:"Ult + Anything" },
+    { main1:"attack", main2:null, additional:["health"], critImportance:3, power:[3,4], shard:"situational", label:"Attack + Health/Dice" },
+  ]},
+  { name:"Muerta", icons:["ult","attack"], poisonWeak:false, builds:[
+    { main1:"attack", main2:"crit", additional:[], critImportance:1, power:[4,4], shard:"situational", label:"Attack + Crit" },
+  ]},
+  { name:"Anti-Mage", icons:["attack","ult"], poisonWeak:false, builds:[
+    { main1:"attack", main2:null, additional:["crit","ult"], critImportance:4, power:[4,4], shard:"no need", label:"Attack + Crit/Ult" },
+    { main1:"ult", main2:"attack", additional:[], critImportance:4, power:[4,4], shard:"no need", label:"Ult + Attack" },
+  ]},
+  { name:"Pangolier", icons:["attack","injury"], poisonWeak:false, builds:[
+    { main1:"attack", main2:null, additional:["health"], critImportance:2, power:[3,4], shard:"situational", label:"Attack + Health/Dice" },
+    { main1:"ult", main2:"attack", additional:[], critImportance:2, power:[3,3], shard:"situational", label:"Ult + Attack" },
+  ]},
+  { name:"Broodmother", icons:["attack","poison"], poisonWeak:false, builds:[
+    { main1:"attack", main2:"poison", additional:[], critImportance:5, power:[3,3], shard:"no need", label:"Attack + Poison" },
+    { main1:"health", main2:null, additional:["poison"], critImportance:5, power:[3,4], shard:"situational", label:"Health + Poison/Dice" },
+    { main1:"spirits", main2:null, additional:["poison"], critImportance:5, power:[3,4], shard:"musthave", label:"Spirits + Poison/Dice" },
+  ]},
+  { name:"Templar Assassin", alias:"TA", icons:["attack","shield"], poisonWeak:false, builds:[
+    { main1:"attack", main2:null, additional:["crit"], critImportance:2, power:[3,3], shard:"situational", label:"Attack + Crit" },
+    { main1:"evasion", main2:"shield", additional:[], critImportance:2, power:[3,3], shard:"situational", label:"Evade + Shield" },
+    { main1:"attack", main2:"crit", additional:[], critImportance:2, power:[3,3], shard:"situational", label:"Attack + Crit" },
+  ]},
+  { name:"Leshrac", icons:["ult","health"], poisonWeak:false, builds:[
+    { main1:"health", main2:null, additional:[], critImportance:3, power:[4,4], shard:"good", label:"Health + Dice/Mage Procs" },
+    { main1:"ult", main2:null, additional:[], critImportance:3, power:[3,4], shard:"good", label:"Ult + Survival" },
+  ]},
+  { name:"Dazzle", icons:["evasion","injury"], poisonWeak:false, builds:[
+    { main1:"poison", main2:null, additional:["regen","health"], critImportance:6, power:[3,3], shard:"good", label:"Poison + Regen/Health" },
+    { main1:"spirits", main2:"injury", additional:[], critImportance:6, power:[3,3], shard:"good", label:"Spirits + Injure" },
+    { main1:"health", main2:null, additional:["evasion","injury"], critImportance:6, power:[4,4], shard:"good", label:"Health/Evade + Injure" },
+  ]},
+  { name:"Void Spirit", icons:["shield","injury"], poisonWeak:false, builds:[
+    { main1:"health", main2:null, additional:["shield"], critImportance:4, power:[4,4], shard:"musthave", label:"Health + Shield" },
+    { main1:"evasion", main2:null, additional:["shield"], critImportance:4, power:[4,4], shard:"musthave", label:"Evade + Shield" },
+    { main1:"spirits", main2:null, additional:["shield"], critImportance:4, power:[4,4], shard:"musthave", label:"Spirits + Shield" },
+  ]},
+  { name:"Abaddon", icons:["regen","shield"], poisonWeak:false, builds:[
+    { main1:"regen", main2:"shield", additional:["crit"], critImportance:1, power:[3,4], shard:"good", label:"Regen + Shield + Crit/Procs" },
+    { main1:"ult", main2:"shield", additional:["regen","evasion"], critImportance:4, power:[4,4], shard:"good", label:"Ult + Shield/Evade + Regen" },
+  ]},
+  { name:"Witch Doctor", icons:["injury","regen"], poisonWeak:false, builds:[
+    { main1:"regen", main2:null, additional:["health"], critImportance:5, power:[3,4], shard:"musthave", label:"Regen/Spirits + Health" },
+    { main1:"attack", main2:null, additional:["evasion"], critImportance:2, power:[3,4], shard:"musthave", label:"Attack + Evade" },
+  ]},
+  { name:"Clinkz", icons:["fury","spirits"], poisonWeak:false, builds:[
+    { main1:"spirits", main2:null, additional:["ult","crit"], critImportance:2, power:[4,5], shard:"situational", label:"Spirits + Ult + Crit" },
+    { main1:"spirits", main2:null, additional:[], critImportance:2, power:[3,4], shard:"situational", label:"Spirits + Dice" },
+  ]},
+  { name:"Pugna", icons:["regen","spirits"], poisonWeak:false, builds:[
+    { main1:"spirits", main2:null, additional:["regen"], critImportance:4, power:[3,4], shard:"no need", label:"Spirits + Regen" },
+    { main1:"ult", main2:null, additional:[], critImportance:4, power:[3,3], shard:"no need", label:"Ult + Survival" },
+  ]},
+  { name:"Timbersaw", alias:"Shredder", icons:["chaos","regen"], poisonWeak:false, builds:[
+    { main1:"chaos", main2:"health", additional:[], critImportance:5, power:[3,3], shard:"situational", label:"Chaos + Health" },
+    { main1:"chaos", main2:null, additional:["regen"], critImportance:5, power:[3,3], shard:"situational", label:"Chaos + Regen" },
+    { main1:"health", main2:null, additional:[], critImportance:3, power:[3,3], shard:"situational", label:"Health + Dice" },
+  ]},
+  { name:"Undying", icons:["health","regen"], poisonWeak:false, builds:[
+    { main1:"health", main2:null, additional:["regen"], critImportance:5, power:[3,4], shard:"situational", label:"Health + Regen" },
+    { main1:"ult", main2:null, additional:["health"], critImportance:5, power:[3,3], shard:"situational", label:"Ult + Health" },
+  ]},
+  { name:"Dragon Knight", alias:"DK", icons:["frost","fury","poison"], poisonWeak:false, builds:[
+    { main1:"health", main2:"poison", additional:["crit"], critImportance:2, power:[3,3], shard:"good", label:"Health + Poison + Crit" },
+    { main1:"fury", main2:"frost", additional:["health"], critImportance:1, power:[3,3], shard:"musthave", label:"Fury + Frost + Health" },
+    { main1:"frost", main2:null, additional:[], critImportance:1, power:[3,3], shard:"good", label:"Frost + Dice" },
+    { main1:"ult", main2:"frost", additional:[], critImportance:4, power:[3,4], shard:"good", label:"Ult + Frost" },
+  ]},
+  { name:"Troll Warlord", icons:["frost","fury"], poisonWeak:false, builds:[
+    { main1:"health", main2:"frost", additional:[], critImportance:3, power:[3,4], shard:"good", label:"Health + Frost" },
+    { main1:"attack", main2:"fury", additional:[], critImportance:2, power:[3,4], shard:"good", label:"Attack + Fury" },
+  ]},
+  { name:"Kunkka", icons:["health"], poisonWeak:false, builds:[
+    { main1:"health", main2:null, additional:["poison","injury"], critImportance:1, power:[3,4], shard:"no need", label:"Health + Poison/Injure" },
+    { main1:"health", main2:"attack", additional:[], critImportance:2, power:[3,4], shard:"good", label:"Health + Attack" },
+  ]},
+  { name:"Tiny", icons:["health"], poisonWeak:false, builds:[
+    { main1:"attack", main2:null, additional:["health"], critImportance:2, power:[3,4], shard:"situational", label:"Attack + Health" },
+    { main1:"health", main2:"crit", additional:[], critImportance:3, power:[4,4], shard:"good", label:"Health + Crit" },
+  ]},
+  { name:"Primal Beast", icons:["health"], poisonWeak:false, builds:[
+    { main1:"health", main2:null, additional:[], critImportance:3, power:[3,4], shard:"musthave", label:"Health + Dice" },
+  ]},
+  { name:"Chef", alias:"Magnus/Magnataur", icons:["health"], poisonWeak:false, builds:[
+    { main1:"health", main2:null, additional:["ult","attack"], critImportance:2, power:[4,5], shard:"good", label:"Health + Ult/Dice + Attack" },
+    { main1:"health", main2:null, additional:[], critImportance:3, power:[4,5], shard:"good", label:"Health + Dice" },
+  ]},
+  { name:"Khepri", icons:["evasion"], poisonWeak:true, builds:[
+    { main1:"regen", main2:null, additional:["health"], critImportance:6, power:[3,4], shard:"situational", label:"Regen + Health" },
+    { main1:"regen", main2:null, additional:["evasion"], critImportance:6, power:[2,3], shard:"situational", label:"Regen + Evade" },
+  ]},
+];
+
+// ============================================================
+// SCORING
+// ============================================================
+function scoreHero(hero, pool) {
+  const p = new Set(pool);
+  if (hero.icons.length > 0 && !hero.icons.every(i => p.has(i))) return null;
+
+  const scored = hero.builds.map(b => {
+    let s = ((b.power[0] + b.power[1]) / 2) * 20;
+    if (b.main1 && p.has(b.main1)) s += 15; else if (b.main1) s -= 25;
+    if (b.main2 && p.has(b.main2)) s += 12; else if (b.main2) s -= 15;
+    const ap = b.additional.filter(x => p.has(x)).length, at = b.additional.length;
+    if (at > 0) s += (ap / at) * 8;
+    if (!p.has("crit")) {
+      if (b.critImportance === 1) s -= 35;
+      else if (b.critImportance === 2) s -= 25;
+      else if (b.critImportance === 3) s -= 12;
+      else if (b.critImportance === 4) s -= 5;
+    } else {
+      if (b.critImportance === 1) s += 8;
+      else if (b.critImportance === 2) s += 5;
+    }
+    if (p.has("frost") && p.has("fury") && ["frost","fury"].some(x => b.main1===x || b.main2===x)) s += 8;
+    if (p.has("shield") && !p.has("injury") && (b.main1==="shield" || b.main2==="shield")) s += 6;
+    if (p.has("injury") && !p.has("shield") && (b.main1==="injury" || hero.icons.includes("injury"))) s += 4;
+    if (p.has("poison") && hero.poisonWeak) s -= 8;
+    if (p.has("chaos") && hero.poisonWeak) s -= 3;
+    if (hero.specialPower) {
+      const m = hero.specialPower.sects.filter(x => p.has(x)).length;
+      if (m >= hero.specialPower.sects.length) {
+        const sp = ((hero.specialPower.power[0] + hero.specialPower.power[1]) / 2) * 20 + 15;
+        s = Math.max(s, sp);
+      }
+    }
+    return { ...b, score: s };
+  });
+  const best = scored.reduce((a, b) => a.score > b.score ? a : b);
+  return { hero, bestBuild: best, score: best.score };
+}
+
+// ============================================================
+// UI ENGINE (vanilla JS, no frameworks)
+// ============================================================
+const selected = new Set();
+const app = document.getElementById("app");
+
+function critLabel(l) {
+  return {1:"Critical + Manablast",2:"Important",3:"Manablast only",4:"May need Manablast",5:"Not important",6:"No need"}[l]||"";
+}
+function critColor(l) {
+  return {1:"#ff4444",2:"#ff8800",3:"#ffcc00",4:"#88cc44",5:"#44aa88",6:"#448844"}[l]||"#888";
+}
+function powerColor(p) {
+  const a=(p[0]+p[1])/2; return a>=5?"#ff4444":a>=4?"#ff8800":a>=3?"#ffcc00":"#888";
+}
+function shardColors(s) {
+  return {musthave:{bg:"#ff4444"},good:{bg:"#44aa44"},situational:{bg:"#cc8800"},"buy late":{bg:"#5588cc"},"no need":{bg:"#555"}}[s]||{bg:"#555"};
+}
+
+function render() {
+  const count = selected.size;
+  const sectsArr = Array.from(selected);
+  const missing = SECTS.filter(s => !selected.has(s.id));
+
+  // Pool notes
+  const notes = [];
+  if (count === 8) {
+    if (!selected.has("crit")) notes.push({icon:"💥",text:"No Crit — physical damage builds weakened",type:"warn"});
+    if (!selected.has("attack")) notes.push({icon:"⚔️",text:"No Attack — primary damage sect missing",type:"warn"});
+    if (!selected.has("regen")) notes.push({icon:"🩹",text:"No Regen — #1 survival sect unavailable",type:"warn"});
+    if (!selected.has("health")) notes.push({icon:"❤️",text:"No Health — #2 survival sect unavailable",type:"warn"});
+    if (!selected.has("ult")) notes.push({icon:"🔮",text:"No Ult — mage damage limited",type:"warn"});
+    if (selected.has("shield") && !selected.has("injury")) notes.push({icon:"🛡️",text:"Shield UNCHECKED — shield stackers are very strong",type:"good"});
+    if (selected.has("injury") && !selected.has("shield")) notes.push({icon:"🩸",text:"Vulnerability UNCHECKED — fast burst games",type:"good"});
+    if (selected.has("frost") && selected.has("fury")) notes.push({icon:"⚡",text:"Frost+Fury SYNERGY — both +50% effectiveness",type:"good"});
+    if (selected.has("poison") && selected.has("evasion")) notes.push({icon:"⚠️",text:"Poison counters Evasion — evade heroes weakened",type:"warn"});
+    if (selected.has("chaos") && selected.has("evasion")) notes.push({icon:"⚠️",text:"Chaos counters Evasion — chaos dmg can't be evaded",type:"warn"});
+  }
+
+  // Recommendations
+  let recs = [];
+  if (count === 8) {
+    recs = HEROES.map(h => scoreHero(h, sectsArr)).filter(Boolean).sort((a,b) => b.score - a.score).slice(0, 5);
+  }
+
+  let html = '';
+
+  // Sect bar
+  html += `<div class="sect-bar">
+    <span class="sect-label">Select 8 Sects in your pool</span>
+    <div style="display:flex;align-items:center;gap:12px">
+      <span class="sect-counter" style="color:${count===8?'#44dd66':'#f0c040'}">${count}/8</span>
+      ${count > 0 ? '<button class="clear-btn" onclick="clearAll()">Clear</button>' : ''}
+    </div>
+  </div>`;
+
+  // Sect grid
+  html += '<div class="sect-grid">';
+  for (const sect of SECTS) {
+    const isSel = selected.has(sect.id);
+    const isDis = !isSel && count >= 8;
+    html += `<button class="sect-btn${isDis?' disabled':''}"
+      onclick="${isDis?'':'toggleSect(\''+sect.id+'\')'}"
+      style="${isSel ? `border-color:${sect.color};background:linear-gradient(135deg,${sect.color}22,${sect.color}11);color:${sect.color};font-weight:700;box-shadow:0 0 20px ${sect.color}22,inset 0 0 15px ${sect.color}11` : ''}">
+      <span class="emoji">${sect.emoji}</span>
+      <span>${sect.name}</span>
+    </button>`;
+  }
+  html += '</div>';
+
+  // Missing
+  if (count === 8) {
+    html += '<div class="missing-bar"><span class="missing-label">Missing:</span>';
+    for (const s of missing) html += `<span class="missing-pill">${s.emoji} ${s.name}</span>`;
+    html += '</div>';
+  }
+
+  // Notes
+  if (notes.length) {
+    html += '<div class="notes">';
+    for (const n of notes) html += `<div class="note ${n.type}">${n.icon} ${n.text}</div>`;
+    html += '</div>';
+  }
+
+  // Results
+  if (count === 8) {
+    html += '<h2 class="results-title">Top 5 Recommendations</h2>';
+    if (!recs.length) {
+      html += '<p class="empty">No heroes available in this pool combination.</p>';
+    } else {
+      for (let i = 0; i < recs.length; i++) {
+        const r = recs[i], b = r.bestBuild, rank = i + 1;
+        const pc = powerColor(b.power);
+        const sc = shardColors(b.shard);
+        const cc = critColor(b.critImportance);
+
+        html += `<div class="hero-card${rank===1?' top':''}">`;
+        html += `<div class="rank-badge" style="background:${rank===1?'linear-gradient(135deg,#f0c040,#d04040)':rank<=3?'rgba(255,255,255,0.1)':'rgba(255,255,255,0.05)'};color:${rank===1?'#000':'#8090a8'}">${rank}</div>`;
+
+        // Header
+        html += `<div class="hero-header"><div>
+          <span class="hero-name" style="color:${rank===1?'#f0c040':'#e0e4ec'}">${r.hero.name}</span>
+          ${r.hero.alias?`<span class="hero-alias">(${r.hero.alias})</span>`:''}
+        </div>
+        <div class="power-badge" style="color:${pc};background:${pc}15;border:1px solid ${pc}33">
+          ${b.power[0]===b.power[1]?b.power[0]:b.power[0]+'-'+b.power[1]}
+        </div></div>`;
+
+        // Build info
+        html += '<div class="build-info">';
+        html += `<div class="build-label">${b.label}</div>`;
+
+        // Sect pills
+        html += '<div class="sect-pills">';
+        const allSects = [b.main1, b.main2, ...b.additional].filter(Boolean);
+        for (const sid of allSects) {
+          const sect = SECTS.find(s => s.id === sid);
+          const inPool = selected.has(sid);
+          html += `<span class="sect-pill" style="background:${inPool?sect.color+'22':'rgba(255,50,50,0.1)'};color:${inPool?sect.color:'#aa4444'};border:1px solid ${inPool?sect.color+'44':'#aa444433'}">${sect.emoji} ${sect.name} ${inPool?'✓':'✗'}</span>`;
+        }
+        html += '</div>';
+
+        // Meta row
+        html += '<div class="meta-row">';
+        html += `<span class="meta-pill" style="background:${cc}18;color:${cc};border:1px solid ${cc}33">Crit: ${critLabel(b.critImportance)}</span>`;
+        html += `<span class="meta-pill" style="background:${sc.bg}33;color:${sc.bg};border:1px solid ${sc.bg}44">Shard: ${b.shard}</span>`;
+        html += `<span class="icon-info">Icons: ${r.hero.icons.length===0?'Always available':r.hero.icons.map(id=>{const s=SECTS.find(x=>x.id===id);return s?s.emoji:id}).join(' ')}</span>`;
+        html += '</div>';
+
+        // Poison warning
+        if (r.hero.poisonWeak && selected.has("poison")) {
+          html += '<div class="poison-warn">⚠️ Weakened by Poison in pool — evasion bypassed</div>';
+        }
+
+        html += '</div></div>'; // build-info, hero-card
+      }
+    }
+  }
+
+  html += '<div class="footer">Data: Gladiators Guide ENG (17.02.2026) + Game Files (V9.22)</div>';
+  app.innerHTML = html;
+}
+
+function toggleSect(id) {
+  if (selected.has(id)) selected.delete(id);
+  else if (selected.size < 8) selected.add(id);
+  render();
+}
+
+function clearAll() {
+  selected.clear();
+  render();
+}
+
+// Initial render
+render();
+</script>
+</body>
+</html>
